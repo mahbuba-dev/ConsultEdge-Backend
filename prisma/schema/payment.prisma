@@ -7,6 +7,11 @@ model Payment {
     amount Float
     status PaymentStatus @default(UNPAID)
 
+    // Coupon snapshot (kept on payment to preserve historical pricing).
+    originalAmount Float?
+    discountAmount Float?  @default(0)
+    couponCode     String?
+
     transactionId      String  @unique
     stripeEventId      String? @unique
     paymentGatewayData Json?

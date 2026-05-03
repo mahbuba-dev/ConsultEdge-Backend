@@ -64,6 +64,7 @@ export const ModelName = {
   ChatRoom: 'ChatRoom',
   Client: 'Client',
   Consultation: 'Consultation',
+  Coupon: 'Coupon',
   Expert: 'Expert',
   ExpertApplication: 'ExpertApplication',
   ExpertSchedule: 'ExpertSchedule',
@@ -292,6 +293,27 @@ export const ConsultationScalarFieldEnum = {
 export type ConsultationScalarFieldEnum = (typeof ConsultationScalarFieldEnum)[keyof typeof ConsultationScalarFieldEnum]
 
 
+export const CouponScalarFieldEnum = {
+  id: 'id',
+  code: 'code',
+  description: 'description',
+  discountType: 'discountType',
+  discountValue: 'discountValue',
+  maxDiscount: 'maxDiscount',
+  minAmount: 'minAmount',
+  expiresAt: 'expiresAt',
+  maxUses: 'maxUses',
+  usedCount: 'usedCount',
+  isActive: 'isActive',
+  isDeleted: 'isDeleted',
+  deletedAt: 'deletedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type CouponScalarFieldEnum = (typeof CouponScalarFieldEnum)[keyof typeof CouponScalarFieldEnum]
+
+
 export const ExpertScalarFieldEnum = {
   id: 'id',
   fullName: 'fullName',
@@ -427,6 +449,9 @@ export const PaymentScalarFieldEnum = {
   consultationId: 'consultationId',
   amount: 'amount',
   status: 'status',
+  originalAmount: 'originalAmount',
+  discountAmount: 'discountAmount',
+  couponCode: 'couponCode',
   transactionId: 'transactionId',
   stripeEventId: 'stripeEventId',
   paymentGatewayData: 'paymentGatewayData',

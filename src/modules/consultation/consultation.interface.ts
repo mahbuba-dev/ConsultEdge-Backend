@@ -3,6 +3,7 @@ import { ConsultationStatus } from "../../generated/enums";
 export interface IBookConsultationPayload {
   expertId: string;
   expertScheduleId: string;
+  couponCode?: string;
 }
 
 export interface IInitiatePaymentPayload {

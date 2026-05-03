@@ -118,3 +118,11 @@ export const ExpertApplicationStatus = {
 } as const
 
 export type ExpertApplicationStatus = (typeof ExpertApplicationStatus)[keyof typeof ExpertApplicationStatus]
+
+
+export const CouponDiscountType = {
+  PERCENT: 'PERCENT',
+  FIXED: 'FIXED'
+} as const
+
+export type CouponDiscountType = (typeof CouponDiscountType)[keyof typeof CouponDiscountType]

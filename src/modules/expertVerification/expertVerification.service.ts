@@ -20,6 +20,8 @@ type SubmitApplicationPayload = {
   experience?: number | string;
   consultationFee?: number | string;
   industryId?: string;
+  industryName?: string;
+  industry?: string;
   profilePhoto?: string;
   resume?: {
     resumeUrl: string;
@@ -134,10 +136,20 @@ const submitApplication = async (userId: string, payload: SubmitApplicationPaylo
   const parsedConsultationFee = Number(payload.consultationFee);
   const fullName = String(payload.fullName ?? user.name ?? "").trim();
   const email = String(payload.email ?? user.email ?? "").trim();
-  const industryId = String(payload.industryId ?? "").trim();
 
-  if (!fullName || !email || !industryId) {
-    throw new AppError(status.BAD_REQUEST, "fullName, email and industryId are required");
+  // Accept industry as either an id (UUID) or a human-readable name.
+  const rawIndustry = String(
+    payload.industryId ?? payload.industryName ?? payload.industry ?? ""
+  ).trim();
+
+  if (!fullName) {
+    throw new AppError(status.BAD_REQUEST, "Full name is required");
+  }
+  if (!email) {
+    throw new AppError(status.BAD_REQUEST, "Email is required");
+  }
+  if (!rawIndustry) {
+    throw new AppError(status.BAD_REQUEST, "Industry is required");
   }
 
   if (!Number.isInteger(parsedExperience) || parsedExperience < 0) {
@@ -148,14 +160,27 @@ const submitApplication = async (userId: string, payload: SubmitApplicationPaylo
     throw new AppError(status.BAD_REQUEST, "Consultation fee must be a positive integer");
   }
 
-  const industry = await prisma.industry.findUnique({
-    where: { id: industryId, isDeleted: false },
-    select: { id: true },
-  });
+  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const isUuid = UUID_REGEX.test(rawIndustry);
+
+  const industry = isUuid
+    ? await prisma.industry.findFirst({
+        where: { id: rawIndustry, isDeleted: false },
+        select: { id: true },
+      })
+    : await prisma.industry.findFirst({
+        where: {
+          isDeleted: false,
+          name: { equals: rawIndustry, mode: "insensitive" },
+        },
+        select: { id: true },
+      });
 
   if (!industry) {
     throw new AppError(status.NOT_FOUND, "Industry not found");
   }
+
+  const industryId = industry.id;
 
   const createdApplication = await prisma.$transaction(async (tx) => {
     const application = await tx.expertApplication.create({

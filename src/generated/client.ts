@@ -107,6 +107,11 @@ export type Client = Prisma.ClientModel
  */
 export type Consultation = Prisma.ConsultationModel
 /**
+ * Model Coupon
+ * 
+ */
+export type Coupon = Prisma.CouponModel
+/**
  * Model Expert
  * 
  */

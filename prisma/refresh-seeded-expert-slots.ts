@@ -47,9 +47,61 @@ const run = async () => {
   }
 
   let createdSlots = 0;
+  let releasedSlots = 0;
+  let purgedSlots = 0;
+
+  const now = new Date();
 
   for (let expertIndex = 0; expertIndex < seededExperts.length; expertIndex += 1) {
     const expert = seededExperts[expertIndex];
+
+    // ---------------------------------------------------------------
+    // Reset stale state on this seeded expert's slots so testers can
+    // book them repeatedly.
+    //   1. Remove past slots that have no real consultation attached.
+    //   2. Release future slots that were marked as booked but never
+    //      tied to a consultation (or whose consultation is gone).
+    // ---------------------------------------------------------------
+    const expertSlots = await prisma.expertSchedule.findMany({
+      where: {
+        expertId: expert.id,
+        isDeleted: false,
+      },
+      select: {
+        id: true,
+        isBooked: true,
+        consultationId: true,
+        scheduleId: true,
+        schedule: { select: { endDateTime: true } },
+        consultation: { select: { id: true } },
+      },
+    });
+
+    for (const slot of expertSlots) {
+      const isPast = slot.schedule.endDateTime <= now;
+      const hasConsultation = !!slot.consultation;
+
+      if (isPast && !hasConsultation) {
+        await prisma.$transaction(async (tx) => {
+          await tx.expertSchedule.delete({ where: { id: slot.id } });
+          await tx.schedule.delete({ where: { id: slot.scheduleId } });
+        });
+        purgedSlots += 1;
+        continue;
+      }
+
+      if (!isPast && slot.isBooked && !hasConsultation) {
+        await prisma.expertSchedule.update({
+          where: { id: slot.id },
+          data: {
+            isBooked: false,
+            consultationId: null,
+            isPublished: true,
+          },
+        });
+        releasedSlots += 1;
+      }
+    }
 
     const existingFutureSlots = await prisma.expertSchedule.count({
       where: {
@@ -120,6 +172,7 @@ const run = async () => {
   }
 
   console.log(`Created ${createdSlots} published slots across first ${seededExperts.length} seeded experts.`);
+  console.log(`Released ${releasedSlots} dangling-booked slots and purged ${purgedSlots} expired seeded slots.`);
 };
 
 run()

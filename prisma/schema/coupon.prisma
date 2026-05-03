@@ -1,0 +1,30 @@
+model Coupon {
+    id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+    code         String             @unique
+    description  String?
+    discountType CouponDiscountType
+    // For PERCENT: 1-100. For FIXED: absolute amount in same currency as fee.
+    discountValue Float
+
+    // Optional cap for percent discounts (e.g. 20% off up to $50).
+    maxDiscount Float?
+
+    // Optional minimum cart amount required to redeem.
+    minAmount Float?
+
+    expiresAt DateTime?
+    maxUses   Int?
+    usedCount Int       @default(0)
+
+    isActive  Boolean   @default(true)
+    isDeleted Boolean   @default(false)
+    deletedAt DateTime?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([code])
+    @@index([isActive])
+    @@map("coupons")
+}

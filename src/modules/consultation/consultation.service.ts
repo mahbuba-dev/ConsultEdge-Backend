@@ -24,6 +24,7 @@ import {
   bookingIncludeConfig,
 } from "./consultation.constant";
 import { QueryBuilder } from "../../utilis/queryBuilder";
+import { couponService } from "../coupon/coupon.service";
 
 const SESSION_JOIN_LEAD_MINUTES = 15;
 const SESSION_JOIN_GRACE_MINUTES = 30;
@@ -436,6 +437,22 @@ const bookConsultation = async (
     payload.expertScheduleId
   );
 
+  // Apply coupon (if any) to the expert's fee.
+  const originalFee = expert.consultationFee;
+  let finalAmount = originalFee;
+  let discountAmount = 0;
+  let couponCode: string | null = null;
+
+  if (payload.couponCode) {
+    const preview = await couponService.validateCoupon(
+      payload.couponCode,
+      originalFee
+    );
+    finalAmount = preview.finalAmount;
+    discountAmount = preview.discountAmount;
+    couponCode = preview.code;
+  }
+
   const videoCallId = uuidv7();
 
   const result = await prisma.$transaction(async (tx) => {
@@ -467,7 +484,10 @@ const bookConsultation = async (
     const payment = await tx.payment.create({
       data: {
         consultationId: consultation.id,
-        amount: expert.consultationFee,
+        amount: finalAmount,
+        originalAmount: originalFee,
+        discountAmount,
+        couponCode,
         transactionId,
         status: PaymentStatus.UNPAID,
       },
@@ -499,7 +519,7 @@ const bookConsultation = async (
       paymentId: payment.id,
       transactionId,
       status: "success",
-      amount: String(expert.consultationFee),
+      amount: String(finalAmount),
     });
 
     const cancelParams = new URLSearchParams({
@@ -507,8 +527,10 @@ const bookConsultation = async (
       paymentId: payment.id,
       transactionId,
       status: "cancelled",
-      amount: String(expert.consultationFee),
+      amount: String(finalAmount),
     });
+
+    const stripeUnitAmount = Math.max(0, Math.round(finalAmount * 100));
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
@@ -520,7 +542,7 @@ const bookConsultation = async (
             product_data: {
               name: `Consultation with ${expert.fullName}`,
             },
-            unit_amount: expert.consultationFee * 100,
+            unit_amount: stripeUnitAmount,
           },
           quantity: 1,
         },
@@ -529,7 +551,10 @@ const bookConsultation = async (
         consultationId: consultation.id,
         paymentId: payment.id,
         transactionId,
-        amount: String(expert.consultationFee),
+        amount: String(finalAmount),
+        originalAmount: String(originalFee),
+        discountAmount: String(discountAmount),
+        couponCode: couponCode ?? "",
       },
       success_url: `${envVars.FRONTEND_URL}/dashboard/payment/consultation-success?${successParams.toString()}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${envVars.FRONTEND_URL}/dashboard/consultations?${cancelParams.toString()}`,
@@ -541,6 +566,15 @@ const bookConsultation = async (
       paymentUrl: session.url,
     };
   });
+
+  if (couponCode) {
+    // Reserve a coupon use as soon as the booking is created. We
+    // intentionally don't await failure here — usage is best-effort and
+    // the booking should still succeed if the counter update misses.
+    couponService.incrementUsage(couponCode).catch((error) => {
+      console.error("Failed to increment coupon usage", error);
+    });
+  }
 
   return {
     consultation: result.consultation,
@@ -569,6 +603,21 @@ const bookConsultationWithPayLater = async (
     expert.id,
     payload.expertScheduleId
   );
+
+  const originalFee = expert.consultationFee;
+  let finalAmount = originalFee;
+  let discountAmount = 0;
+  let couponCode: string | null = null;
+
+  if (payload.couponCode) {
+    const preview = await couponService.validateCoupon(
+      payload.couponCode,
+      originalFee
+    );
+    finalAmount = preview.finalAmount;
+    discountAmount = preview.discountAmount;
+    couponCode = preview.code;
+  }
 
   const videoCallId = uuidv7();
 
@@ -601,7 +650,10 @@ const bookConsultationWithPayLater = async (
     const payment = await tx.payment.create({
       data: {
         consultationId: consultation.id,
-        amount: expert.consultationFee,
+        amount: finalAmount,
+        originalAmount: originalFee,
+        discountAmount,
+        couponCode,
         transactionId,
         status: PaymentStatus.UNPAID,
       },
@@ -633,6 +685,12 @@ const bookConsultationWithPayLater = async (
       payment,
     };
   });
+
+  if (couponCode) {
+    couponService.incrementUsage(couponCode).catch((error) => {
+      console.error("Failed to increment coupon usage", error);
+    });
+  }
 
   return result;
 };

@@ -19,6 +19,7 @@
     "seed:refresh:slots": "tsx prisma/refresh-seeded-expert-slots.ts",
     "seed:refresh:review-clients": "tsx prisma/refresh-seeded-review-clients.ts",
     "seed:refresh:testimonials": "tsx prisma/refresh-seeded-testimonials.ts",
+    "experts:cleanup-broken": "tsx prisma/cleanup-broken-experts.ts",
     "service:up": "npm run build && npx prisma migrate deploy && pm2 start ecosystem.config.cjs --env production --update-env && pm2 save",
     "service:restart": "pm2 restart consultedge-backend --update-env && pm2 save",
     "service:logs": "pm2 logs consultedge-backend",

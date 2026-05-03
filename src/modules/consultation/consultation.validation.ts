@@ -9,6 +9,7 @@ export const bookConsultationValidation = z.object({
   body: z.object({
     expertId: z.string().uuid("Invalid expert id"),
     expertScheduleId: z.string().uuid("Invalid expert schedule id"),
+    couponCode: z.string().trim().min(1).max(40).optional(),
   }),
 });
 

@@ -21,6 +21,7 @@ import { chatRoutes } from "./modules/chat/chat.routes";
 import { aiRoutes } from "./modules/ai/ai.router";
 import { conversationsRoutes } from "./modules/conversations/conservations.router";
 import { realtimeRoutes } from "./modules/realtime/realtime.routes";
+import { couponRouter } from "./modules/coupon/coupon.router";
 
 
 const router = Router();
@@ -55,4 +56,5 @@ router.use("/realtime", realtimeRoutes)
 router.use("/industries", industryRouter);
 router.use("/expert-verification", expertVerificationRouter)
 router.use("/testimonials", testimonialRoutes)
+router.use("/coupons", couponRouter)
 export const indexRoutes = router;

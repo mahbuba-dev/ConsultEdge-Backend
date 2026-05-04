@@ -73,8 +73,36 @@ const bootstrap = async() => {
 
     try {
         await connectPrismaWithRetry({ retries: 5, retryDelayMs: 2000 });
+
+        // Defensive: ensure the live DB Role enum has all expected values.
+        // In some historical deploys the `_prisma_migrations` table got out of
+        // sync with the actual enum definition, which causes downstream seed
+        // calls (signUpEmail with role=CLIENT) to fail with P2007. This is
+        // idempotent and safe to run on every boot.
+        try {
+            await prisma.$executeRawUnsafe(
+                `ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'CLIENT';`
+            );
+            await prisma.$executeRawUnsafe(
+                `ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'EXPERT';`
+            );
+            await prisma.$executeRawUnsafe(
+                `ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'ADMIN';`
+            );
+        } catch (enumErr) {
+            console.warn("Role enum self-heal skipped:", enumErr);
+        }
+
         await seedAdmin();
-        await seedDemoClient();
+
+        // Demo seeding must never block the server from starting in
+        // production. If it fails (e.g. transient DB issue, missing enum
+        // value, etc.) log it and continue.
+        try {
+            await seedDemoClient();
+        } catch (demoErr) {
+            console.error("seedDemoClient failed (non-fatal):", demoErr);
+        }
 
         await new Promise<void>((resolve, reject) => {
             httpServer.once("error", reject);

@@ -404,8 +404,25 @@ var bootstrap = async () => {
   const port = Number(envVars.PORT);
   try {
     await connectPrismaWithRetry({ retries: 5, retryDelayMs: 2e3 });
+    try {
+      await prisma.$executeRawUnsafe(
+        `ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'CLIENT';`
+      );
+      await prisma.$executeRawUnsafe(
+        `ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'EXPERT';`
+      );
+      await prisma.$executeRawUnsafe(
+        `ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'ADMIN';`
+      );
+    } catch (enumErr) {
+      console.warn("Role enum self-heal skipped:", enumErr);
+    }
     await seedAdmin();
-    await seedDemoClient();
+    try {
+      await seedDemoClient();
+    } catch (demoErr) {
+      console.error("seedDemoClient failed (non-fatal):", demoErr);
+    }
     await new Promise((resolve, reject) => {
       httpServer.once("error", reject);
       httpServer.listen(port, () => {

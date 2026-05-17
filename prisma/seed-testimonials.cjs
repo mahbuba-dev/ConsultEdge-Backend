@@ -1,0 +1,108 @@
+const { PrismaClient } = require('../src/generated/client');
+const fs = require('fs');
+const path = require('path');
+
+const prisma = new PrismaClient();
+
+function loadSeedData() {
+  const filePath = path.join(__dirname, '../../prisma/seed-data.json');
+  const raw = fs.readFileSync(filePath, 'utf-8');
+  const data = JSON.parse(raw);
+  return {
+    expertUsers: data.expertUsers,
+    clientUsers: data.clientUsers,
+    experts: data.experts,
+    clients: data.clients,
+  };
+}
+
+const testimonialComments = [
+  "Working with this expert was a fantastic experience!",
+  "Very knowledgeable and helpful. Highly recommend.",
+  "Professional, prompt, and insightful advice.",
+  "Helped me solve a complex problem quickly.",
+  "Great communication and expertise.",
+  "Exceeded my expectations in every way.",
+  "Clear explanations and actionable guidance.",
+  "Friendly and easy to work with.",
+  "Delivered high-quality results on time.",
+  "Would definitely consult again!",
+  "Impressed by the depth of knowledge.",
+  "Made a real difference for my project.",
+  "Quick to respond and very thorough.",
+  "Helped me gain new insights.",
+  "A true professional in their field.",
+  "Went above and beyond to assist.",
+  "Outstanding service and support.",
+  "Very satisfied with the consultation.",
+  "Brought clarity to a confusing issue.",
+  "Highly skilled and reliable.",
+];
+
+function getRandomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function getRandomComment() {
+  return testimonialComments[getRandomInt(0, testimonialComments.length - 1)];
+}
+
+async function main() {
+  const seed = loadSeedData();
+
+  const clientMap = new Map();
+  seed.clients.forEach((c) => clientMap.set(c.userId, c));
+  const expertMap = new Map();
+  seed.experts.forEach((e) => expertMap.set(e.userId, e));
+
+  const realClients = seed.clientUsers
+    .map((u) => Object.assign({}, u, { clientId: clientMap.get(u.id)?.id }))
+    .filter((u) => u.clientId);
+  const realExperts = seed.expertUsers
+    .map((u) => Object.assign({}, u, { expertId: expertMap.get(u.id)?.id }))
+    .filter((u) => u.expertId);
+
+  const usedPairs = new Set();
+  const testimonials = [];
+  let attempts = 0;
+  const maxAttempts = 1000;
+
+  while (testimonials.length < 30 && attempts < maxAttempts) {
+    attempts++;
+    const client = realClients[getRandomInt(0, realClients.length - 1)];
+    const expert = realExperts[getRandomInt(0, realExperts.length - 1)];
+    if (client.clientId === undefined || expert.expertId === undefined) continue;
+    if (client.clientId === expert.expertId) continue;
+    const pairKey = `${client.clientId}_${expert.expertId}`;
+    if (usedPairs.has(pairKey)) continue;
+    usedPairs.add(pairKey);
+    testimonials.push({
+      clientId: client.clientId,
+      expertId: expert.expertId,
+      rating: getRandomInt(4, 5),
+      comment: getRandomComment(),
+      createdAt: new Date(Date.now() - getRandomInt(0, 60 * 24 * 60 * 60 * 1000)),
+    });
+  }
+
+  if (testimonials.length < 30) {
+    throw new Error('Could not generate enough unique client-expert testimonial pairs.');
+  }
+
+  for (const t of testimonials) {
+    await prisma.testimonial.create({
+      data: t,
+    });
+  }
+
+  console.log(`Inserted ${testimonials.length} testimonials.`);
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

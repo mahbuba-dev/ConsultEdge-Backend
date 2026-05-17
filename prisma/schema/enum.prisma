@@ -39,6 +39,7 @@ enum VerificationStatus {
 }
 
 enum ReviewStatus {
+    
     PENDING
     APPROVED
     HIDDEN

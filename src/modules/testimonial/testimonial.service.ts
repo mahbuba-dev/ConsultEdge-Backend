@@ -212,11 +212,21 @@ const getAllTestimonialsForAdmin = async (
 // GET TESTIMONIALS BY EXPERT
 // ------------------------------
 const getTestimonialsByExpert = async (expertId: string) => {
-  // ✅ Optional validation (recommended)
-  const expert = await prisma.expert.findUnique({
-    where: { id: expertId },
-  });
 
+  // Accept either UUID (v4) or email as expertId (consistent with validation)
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  let realExpertId = expertId;
+  if (!uuidRegex.test(expertId)) {
+    // Try to resolve by email
+    const expertByEmail = await prisma.expert.findUnique({ where: { email: expertId } });
+    if (!expertByEmail) {
+      throw new AppError(status.BAD_REQUEST, "Invalid expertId: must be a valid UUID or a valid expert email");
+    }
+    realExpertId = expertByEmail.id;
+  }
+  const expert = await prisma.expert.findUnique({
+    where: { id: realExpertId },
+  });
   if (!expert) {
     throw new AppError(status.NOT_FOUND, "Expert not found");
   }
@@ -231,7 +241,7 @@ const getTestimonialsByExpert = async (expertId: string) => {
   // });
 const result = await prisma.testimonial.findMany({
   where: {
-    expertId,
+    expertId: realExpertId,
   },
   include: testimonialIncludeConfig,
 });

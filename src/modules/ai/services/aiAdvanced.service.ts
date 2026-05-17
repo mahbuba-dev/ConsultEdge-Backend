@@ -294,24 +294,9 @@ const recommendations = async (
 
     const candidates = await fetchExpertCandidates();
     if (candidates.length === 0) {
-      return {
-        data: {
-          mode,
-          activityCount,
-          experts: buildEmptyStateFallback(mode, {
-            exploredIndustries,
-            viewedExperts,
-            searchHistory,
-            clickedCategories,
-          }),
-        },
-        meta: {
-          model: "heuristic",
-          provider: "fallback",
-          tokensUsed: 0,
-          latencyMs: 0,
-        },
-      };
+      throw new Error(
+        "No expert candidates found. Real AI unavailable or insufficient data. Please try again later."
+      );
     }
 
     const viewedTokenSet = new Set(viewedExperts.map(normalizeTerm));
@@ -409,38 +394,16 @@ const recommendations = async (
               }),
       },
       meta: {
-        model: "heuristic",
-        provider: "fallback",
-        tokensUsed: 0,
-        latencyMs: 0,
+        model: meta.model,
+        provider: meta.provider,
+        tokensUsed: meta.tokensUsed,
+        latencyMs: meta.latencyMs,
       },
     };
-  } catch {
-    const viewedExperts = normalizeList(input.viewedExperts);
-    const exploredIndustries = normalizeList(input.exploredIndustries);
-    const searchHistory = normalizeList(input.searchHistory);
-    const clickedCategories = normalizeList(input.clickedCategories);
-    const activityCount =
-      viewedExperts.length +
-      exploredIndustries.length +
-      searchHistory.length +
-      clickedCategories.length;
-    const mode: "cold-start" | "personalized" =
-      activityCount === 0 ? "cold-start" : "personalized";
-
-    return {
-      data: {
-        mode,
-        activityCount,
-        experts: buildEmptyStateFallback(mode, {
-          exploredIndustries,
-          viewedExperts,
-          searchHistory,
-          clickedCategories,
-        }),
-      },
-      meta: { model: "heuristic", provider: "fallback", tokensUsed: 0, latencyMs: 0 },
-    };
+  } catch (err) {
+    throw new Error(
+      "AI recommendations unavailable. Real AI provider failed or is not configured. Please try again later."
+    );
   }
 };
 
@@ -512,15 +475,9 @@ const industryCreation = async (
     });
 
     if (!data) {
-      return {
-        data: buildIndustryFallback(industryName),
-        meta: {
-          model: meta.model,
-          provider: meta.provider,
-          tokensUsed: meta.tokensUsed,
-          latencyMs: meta.latencyMs,
-        },
-      };
+      throw new Error(
+        "AI industry creation unavailable. Real AI provider failed or is not configured. Please try again later."
+      );
     }
 
     const safe: AIIndustryCreationResult = {
@@ -548,16 +505,10 @@ const industryCreation = async (
         latencyMs: meta.latencyMs,
       },
     };
-  } catch {
-    return {
-      data: buildIndustryFallback(industryName),
-      meta: {
-        model: "heuristic",
-        provider: "fallback",
-        tokensUsed: 0,
-        latencyMs: 0,
-      },
-    };
+  } catch (err) {
+    throw new Error(
+      "AI industry creation unavailable. Real AI provider failed or is not configured. Please try again later."
+    );
   }
 };
 
@@ -1020,79 +971,16 @@ const search = async (
         recentSearches,
       },
       meta: {
-        model: "heuristic",
-        provider: "fallback",
-        tokensUsed: 0,
-        latencyMs: 0,
+        model: meta.model,
+        provider: meta.provider,
+        tokensUsed: meta.tokensUsed,
+        latencyMs: meta.latencyMs,
       },
     };
-  } catch {
-    const activity = normalizeActivity(input.userActivity);
-    const query = sanitizeText(input.query, 500).trim();
-    const fallbackExperts = (input.db?.experts ?? [])
-      .map((expert) => ({
-        type: "expert" as const,
-        id: sanitizeText(expert.id, 80).trim(),
-        name: sanitizeText(expert.name, 200).trim(),
-        title: sanitizeText(expert.title ?? "Consulting Expert", 120).trim() || "Consulting Expert",
-        specialization:
-          sanitizeText(expert.specialization ?? expert.industry ?? "General Consulting", 120).trim() ||
-          "General Consulting",
-        industry: sanitizeText(expert.industry ?? "General", 120).trim() || "General",
-        matchScore: 0.3,
-      }))
-      .filter((item) => item.id && item.name)
-      .slice(0, 5);
-
-    const fallbackIndustries = (input.db?.industries ?? [])
-      .map((industry) => ({
-        type: "industry" as const,
-        id: sanitizeText(industry.id ?? industry.name ?? industry.industryName ?? "", 80).trim(),
-        industryName:
-          sanitizeText(industry.industryName ?? industry.name ?? "", 120).trim() || "General",
-        description: snippet(industry.description ?? "", 180),
-        matchScore: 0.3,
-      }))
-      .filter((item) => item.id && item.industryName)
-      .slice(0, 5);
-
-    const fallbackTestimonials = (input.db?.testimonials ?? [])
-      .map((testimonial) => ({
-        type: "testimonial" as const,
-        id: sanitizeText(testimonial.id ?? "", 80).trim(),
-        expertName: sanitizeText(testimonial.expertName ?? "", 200).trim(),
-        contentSnippet: snippet(testimonial.content ?? testimonial.comment ?? ""),
-        matchScore: 0.25,
-      }))
-      .filter((item) => item.id && item.expertName && item.contentSnippet)
-      .slice(0, 5);
-
-    const fallbackTrending = (input.db?.trending ?? [])
-      .map((item) => ({
-        type: "trending" as const,
-        title: sanitizeText(item.title ?? "", 120).trim(),
-        category: sanitizeText(item.category ?? "trending", 80).trim() || "trending",
-        reason: sanitizeText(item.reason ?? "Popular this week", 200).trim() || "Popular this week",
-      }))
-      .filter((item) => item.title)
-      .slice(0, 5);
-
-    return {
-      data: {
-        experts: fallbackExperts,
-        industries: fallbackIndustries,
-        testimonials: fallbackTestimonials,
-        trending: fallbackTrending,
-        aiSuggestions: generateAISuggestions({
-          query,
-          topIndustries: fallbackIndustries.map((item) => item.industryName),
-          topExpertSkills: fallbackExperts.map((item) => item.specialization),
-          trendingTitles: fallbackTrending.map((item) => item.title),
-        }),
-        recentSearches: buildRecentSearches(query, activity.searchHistory),
-      },
-      meta: { model: "heuristic", provider: "fallback", tokensUsed: 0, latencyMs: 0 },
-    };
+  } catch (err) {
+    throw new Error(
+      "AI search unavailable. Real AI provider failed or is not configured. Please try again later."
+    );
   }
 };
 

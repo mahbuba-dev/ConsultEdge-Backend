@@ -9,11 +9,19 @@ import { aiChatController } from "./controllers/aiChat.controller";
 import { aiOpsController } from "./controllers/aiOps.controller";
 import { aiRagController } from "./controllers/aiRag.controller";
 import { aiValidation } from "./ai.validation";
+import { profileSuggest } from "./controllers/aiProfileSuggest.controller";
 import { aiLogger } from "./utils/aiLogger";
 import { rateLimit } from "./utils/rateLimiter";
 import { aiErrorHandler } from "./utils/aiErrorHandler";
 
 const router = Router();
+
+// Profile Suggest endpoint for expert onboarding
+router.post(
+  "/profile-suggest",
+  validateRequest(aiValidation.profileSuggest),
+  profileSuggest
+);
 
 // Logging + metrics on all AI requests
 router.use(aiLogger);

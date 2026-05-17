@@ -124,6 +124,13 @@ const documentAnalysis = z.object({
   }),
 });
 
+const profileSuggest = z.object({
+  body: z.object({
+    industry: z.string().trim().min(2).max(100),
+    feedback: z.string().max(400).optional(),
+  }),
+});
+
 export const aiValidation = {
   askSupport,
   recommendations,
@@ -136,4 +143,5 @@ export const aiValidation = {
   messageFeedback,
   ragQuery,
   documentAnalysis,
+  profileSuggest,
 };

@@ -1,0 +1,293 @@
+openapi: 3.0.3
+info:
+  title: ConsultEdge Analytics API
+  version: 1.0.0
+  description: Versioned, contract-stable analytics endpoints for frontend integration.
+paths:
+  /api/v1/analytics/expert:
+    get:
+      summary: Get expert analytics
+      tags: [Analytics]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpertAnalyticsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/analytics/client:
+    get:
+      summary: Get client analytics
+      tags: [Analytics]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientAnalyticsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/analytics/admin:
+    get:
+      summary: Get admin analytics
+      tags: [Analytics]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAnalyticsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/analytics/ai:
+    get:
+      summary: Get AI analytics
+      tags: [Analytics]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIAnalyticsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    AIInsight:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [summary, anomaly, recommendation, trend]
+        title:
+          type: string
+        description:
+          type: string
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        source:
+          type: string
+          enum: [ai, human, hybrid]
+        createdAt:
+          type: string
+          format: date-time
+        relatedIds:
+          type: array
+          items:
+            type: string
+        meta:
+          type: object
+          additionalProperties: true
+    ExpertAnalytics:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        spendingTrends:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+              amount:
+                type: number
+        engagement:
+          type: object
+          properties:
+            sessions:
+              type: number
+            messages:
+              type: number
+        categories:
+          type: array
+          items:
+            type: string
+        aiInsights:
+          type: array
+          items:
+            $ref: '#/components/schemas/AIInsight'
+    ClientAnalytics:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        savedExperts:
+          type: array
+          items:
+            type: string
+        engagement:
+          type: object
+          properties:
+            sessions:
+              type: number
+            messages:
+              type: number
+        spendingTrends:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+              amount:
+                type: number
+        aiInsights:
+          type: array
+          items:
+            $ref: '#/components/schemas/AIInsight'
+    AdminAnalytics:
+      type: object
+      properties:
+        id:
+          type: string
+        platformTrends:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+              value:
+                type: number
+        categoryBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              category:
+                type: string
+              count:
+                type: number
+        aiInsights:
+          type: array
+          items:
+            $ref: '#/components/schemas/AIInsight'
+    AIAnalytics:
+      type: object
+      properties:
+        id:
+          type: string
+        usageTrends:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+              count:
+                type: number
+        feedback:
+          type: object
+          properties:
+            likes:
+              type: number
+            dislikes:
+              type: number
+        aiInsights:
+          type: array
+          items:
+            $ref: '#/components/schemas/AIInsight'
+    ExpertAnalyticsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExpertAnalytics'
+        meta:
+          type: object
+          properties:
+            generatedAt:
+              type: string
+              format: date-time
+            version:
+              type: string
+    ClientAnalyticsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClientAnalytics'
+        meta:
+          type: object
+          properties:
+            generatedAt:
+              type: string
+              format: date-time
+            version:
+              type: string
+    AdminAnalyticsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminAnalytics'
+        meta:
+          type: object
+          properties:
+            generatedAt:
+              type: string
+              format: date-time
+            version:
+              type: string
+    AIAnalyticsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AIAnalytics'
+        meta:
+          type: object
+          properties:
+            generatedAt:
+              type: string
+              format: date-time
+            version:
+              type: string
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            code:
+              type: string
+            fields:
+              type: array
+              items:
+                type: string

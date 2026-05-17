@@ -559,8 +559,9 @@ const getRoomMessages = async (roomId: string, userId: string, role: Role) => {
   const room = await ensureRoomAccess(roomId, userId, role);
   const participants = await buildParticipants(room);
 
+  // Only fetch messages sent by the logged-in user
   const messages = await prisma.message.findMany({
-    where: { roomId: room.id },
+    where: { roomId: room.id, senderId: userId },
     include: messageInclude,
     orderBy: { createdAt: "asc" },
   });
@@ -782,6 +783,14 @@ const updateCallStatus = async (callId: string, statusValue: CallStatus) => {
   const deleteMessage = async (roomId: string, messageId: string, userId: string, role: Role) => {
     // Ensure user has access to the room
     await ensureRoomAccess(roomId, userId, role);
+    // Ensure the message belongs to the user
+    const message = await prisma.message.findUnique({
+      where: { id: messageId },
+      select: { senderId: true },
+    });
+    if (!message || message.senderId !== userId) {
+      throw new AppError(httpStatus.FORBIDDEN, "You can only delete your own messages");
+    }
     // Delete the message
     const deleted = await prisma.message.delete({
       where: { id: messageId },

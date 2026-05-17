@@ -1,3 +1,6 @@
+// Debug log for AI provider config
+console.log("AI_PROVIDER:", process.env.AI_PROVIDER);
+console.log("OPENAI_API_KEY:", process.env.OPENAI_API_KEY ? "set" : "missing");
 import app from "./app";
 import { envVars } from "./config/env";
 import { createServer } from "node:http";

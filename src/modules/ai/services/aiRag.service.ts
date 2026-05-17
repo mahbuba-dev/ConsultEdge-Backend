@@ -48,23 +48,9 @@ export const aiRagService = {
     const ranked = rankRagContext(input.query, input.context, input.topK ?? 6);
 
     if (ranked.length === 0 || ranked[0].score < 0.08) {
-      return {
-        data: {
-          answer: NO_MATCH,
-          reasoning: "No relevant evidence matched the query in retrieved context.",
-          sources: [],
-          suggestions: [
-            "Try refining the query with specific industry, expert name, or title.",
-            "Increase retrieval depth and rerun the query.",
-          ],
-        },
-        meta: {
-          model: "heuristic",
-          provider: "fallback",
-          tokensUsed: 0,
-          latencyMs: 0,
-        },
-      };
+      throw new Error(
+        "No relevant evidence matched the query in retrieved context. Real AI unavailable or insufficient context. Please refine your query or try again later."
+      );
     }
 
     const { data, meta } = await aiProvider.generateJSON<RagResponse>({

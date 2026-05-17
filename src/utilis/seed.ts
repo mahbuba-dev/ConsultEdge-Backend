@@ -97,6 +97,10 @@ export const seedDemoClient = async () => {
         },
     });
 
+    // If you ever add Account creation here, use:
+    // const bcrypt = await import('bcrypt');
+    // const hashedPassword = await bcrypt.hash(credentials.password, 10);
+    // providerId: 'credential', password: hashedPassword
     return credentials;
 };
 
@@ -253,6 +257,10 @@ export const seedDemoExpert = async () => {
         },
     });
 
+    // If you ever add Account creation here, use:
+    // const bcrypt = await import('bcrypt');
+    // const hashedPassword = await bcrypt.hash(credentials.password, 10);
+    // providerId: 'credential', password: hashedPassword
     return credentials;
 };
 
@@ -279,7 +287,6 @@ export const seedDemoAdmin = async () => {
                 rememberMe: false,
             },
         });
-
         userId = created.user.id;
     }
 
@@ -309,5 +316,6 @@ export const seedDemoAdmin = async () => {
         },
     });
 
+    // No manual account creation or password hash update. Let BetterAuth handle all password logic.
     return credentials;
 };

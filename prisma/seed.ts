@@ -1,5 +1,7 @@
+
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import bcrypt from "bcrypt";
 
 import { prisma } from "../src/lib/prisma";
 import {
@@ -123,22 +125,22 @@ const validateRelations = (payload: SeedPayload) => {
 };
 
 const validateUniqueness = (payload: SeedPayload) => {
-  assertUnique(payload.industries, (row) => row.id, "industry id");
+  assertUnique(payload.industries, (row) => row.id ?? "", "industry id");
   assertUnique(payload.industries, (row) => row.name.toLowerCase(), "industry name");
 
   const allUsers = [...payload.expertUsers, ...payload.clientUsers];
   assertUnique(allUsers, (row) => row.id, "user id");
   assertUnique(allUsers, (row) => row.email.toLowerCase(), "user email");
 
-  assertUnique(payload.clients, (row) => row.id, "client id");
-  assertUnique(payload.clients, (row) => row.userId, "client userId");
-  assertUnique(payload.clients, (row) => row.email.toLowerCase(), "client email");
+  assertUnique(payload.clients, (row) => row.id ?? "", "client id");
+  assertUnique(payload.clients, (row) => row.userId ?? "", "client userId");
+  assertUnique(payload.clients, (row) => row.email?.toLowerCase() ?? "", "client email");
 
-  assertUnique(payload.experts, (row) => row.id, "expert id");
-  assertUnique(payload.experts, (row) => row.userId, "expert userId");
-  assertUnique(payload.experts, (row) => row.email.toLowerCase(), "expert email");
+  assertUnique(payload.experts, (row) => row.id ?? "", "expert id");
+  assertUnique(payload.experts, (row) => row.userId ?? "", "expert userId");
+  assertUnique(payload.experts, (row) => row.email?.toLowerCase() ?? "", "expert email");
 
-  assertUnique(payload.testimonials, (row) => row.id, "testimonial id");
+  assertUnique(payload.testimonials, (row) => row.id ?? "", "testimonial id");
 };
 
 const parseSeedPayload = async (filePath: string): Promise<SeedPayload> => {
@@ -226,6 +228,47 @@ const seed = async (seedFileArg?: string) => {
         payload.testimonials,
         batchSize
       );
+
+      // --- Account seeding for demo users ---
+      // Define demo users and their passwords (match your demo script)
+      const demoAccounts = [
+        {
+          id: "6f9d1cf7-6bda-4c3a-8e76-87d0036939c5",
+          accountId: "cc4208e1-456d-43af-a5bd-47a48a5c9325",
+          providerId: "credential",
+          userId: "cc4208e1-456d-43af-a5bd-47a48a5c9325",
+          password: await bcrypt.hash(process.env.DEMO_ADMIN_PASSWORD || "Admin&12345", 10),
+        },
+        {
+          id: "vmt8nldX0uhOPDGfBcgX3QxBkS9iQ5Ix",
+          accountId: "zWRqaTeWFFPvrZyaGLpQtRgdZwnJGnj9",
+          providerId: "credential",
+          userId: "zWRqaTeWFFPvrZyaGLpQtRgdZwnJGnj9",
+          password: await bcrypt.hash(process.env.DEMO_CLIENT_PASSWORD || "Anisha&12345", 10),
+        },
+        {
+          id: "hoa0bG4Sd0AnKsICmgBv7fXZPHCwAS3u",
+          accountId: "osTobXJXugavw2V0Umqap0EnruwFw1oy",
+          providerId: "credential",
+          userId: "osTobXJXugavw2V0Umqap0EnruwFw1oy",
+          password: await bcrypt.hash(process.env.DEMO_EXPERT_PASSWORD || "Expert&12345", 10),
+        },
+        {
+          id: "c0owvNqA4cyyqyWiAUFwkltqoKLtuYbr",
+          accountId: "a6BuotBirpAG0EL1mhVcZEtHMGhMcpED",
+          providerId: "credential",
+          userId: "a6BuotBirpAG0EL1mhVcZEtHMGhMcpED",
+          password: await bcrypt.hash(process.env.DEMO_MAHI_PASSWORD || "Mahi&12345", 10),
+        },
+      ];
+
+      // Only create accounts for users that exist in the payload
+      const userIds = new Set(allUsers.map(u => u.id));
+      const filteredAccounts = demoAccounts.filter(acc => userIds.has(acc.userId));
+      for (const account of filteredAccounts) {
+        await tx.account.create({ data: account });
+      }
+      // --- End Account seeding ---
     });
 
     console.log("Seed completed successfully", {
@@ -238,6 +281,7 @@ const seed = async (seedFileArg?: string) => {
         clients: payload.clients.length,
         experts: payload.experts.length,
         testimonials: payload.testimonials.length,
+        accounts: 4,
       },
     });
   } finally {

@@ -10,7 +10,7 @@ import {
   prismaNamespace_exports,
   seedAdmin,
   seedDemoClient
-} from "./chunk-O3CYL35B.js";
+} from "./chunk-CLS3XG2Y.js";
 
 // src/app.ts
 import express from "express";
@@ -351,6 +351,8 @@ var app_default = app;
 
 // src/server.ts
 import { createServer } from "http";
+console.log("AI_PROVIDER:", process.env.AI_PROVIDER);
+console.log("OPENAI_API_KEY:", process.env.OPENAI_API_KEY ? "set" : "missing");
 var httpServer = createServer(app_default);
 var isShuttingDown = false;
 var shutdown = async (signal, exitCode = 0) => {
